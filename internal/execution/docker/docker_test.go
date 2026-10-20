@@ -34,8 +34,8 @@ func TestTranslateBuildsDockerExecArguments(t *testing.T) {
 	}
 	want := []string{
 		"exec", "--interactive",
-		"--env", "PGHOST=db",
-		"--env", "PGPASSWORD=secret-value",
+		"--env", "PGHOST",
+		"--env", "PGPASSWORD",
 		"pg-primary", "psql", "--tuples-only", "--file", "-",
 	}
 	if strings.Join(cmd.Args, "\x00") != strings.Join(want, "\x00") {
@@ -44,8 +44,18 @@ func TestTranslateBuildsDockerExecArguments(t *testing.T) {
 	if cmd.Stdin != "SELECT 1;\n" {
 		t.Errorf("stdin was not forwarded: %q", cmd.Stdin)
 	}
-	if len(cmd.Env) != 0 {
-		t.Errorf("the docker CLI process must not inherit credentials, got %v", cmd.Env)
+	// Values are carried by the docker CLI environment, never by argv.
+	if strings.Contains(strings.Join(cmd.Args, " "), "secret-value") {
+		t.Fatalf("a credential leaked into the argument vector: %v", cmd.Args)
+	}
+	joinedEnv := strings.Join(cmd.Env, " ")
+	for _, wantEnv := range []string{"PGHOST=db", "PGPASSWORD=secret-value"} {
+		if !strings.Contains(joinedEnv, wantEnv) {
+			t.Errorf("docker CLI environment is missing %q: %v", wantEnv, cmd.Env)
+		}
+	}
+	if strings.Contains(cmd.Describe(), "secret-value") {
+		t.Fatalf("Describe leaked the credential: %s", cmd.Describe())
 	}
 }
 

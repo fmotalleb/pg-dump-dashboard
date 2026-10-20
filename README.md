@@ -55,6 +55,13 @@ executable.
 - **Single binary.** Tailwind CSS is compiled at build time, embedded with
   `go:embed`, and served by the Go server.
 
+![Dashboard overview](docs/dashboard.png)
+
+Expanding a database shows its catalog facts and largest relations, with row
+counts marked as estimates:
+
+![Database details](docs/dashboard-details.png)
+
 ## Architecture
 
 ```
@@ -218,16 +225,17 @@ Commands are wrapped as `docker exec …` and executed through the Docker CLI:
 
 ```
 docker exec --interactive \
-  --env PGHOST=… --env PGPORT=… --env PGUSER=… --env PGPASSWORD=… \
+  --env PGHOST --env PGPORT --env PGUSER --env PGPASSWORD \
   <container> pg_dump --no-password --format=custom … -- <database>
 ```
 
 - The container is **never guessed**. `-docker-container` is mandatory; the
   backend refuses to start without it.
-- Connection parameters are passed as `docker exec --env` entries, so they do
-  not appear in the `docker` process argument vector (which is readable by other
-  local users through `/proc`).
-- The Docker CLI process itself receives no database environment.
+- Connection parameters are forwarded as **name-only** `docker exec --env KEY`
+  entries, and the values are supplied through the environment of the Docker CLI
+  process. A credential therefore never appears in an argument vector
+  (`/proc/<pid>/cmdline` is world-readable) — only in the process environment,
+  which is restricted to the process owner and root.
 - The container must contain `psql` and `pg_dump`; the image used for the
   PostgreSQL server normally does.
 

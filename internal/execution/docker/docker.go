@@ -46,9 +46,12 @@ type Translator struct {
 
 // Translate implements execution.Translator.
 //
-// Connection parameters travel as "docker exec -e KEY=VALUE" entries, so they
-// are not visible in the argv of the spawned docker process (argv can be read
-// by any local user through /proc) and are not expanded by a shell.
+// Connection parameters are forwarded as "docker exec --env KEY" entries
+// without values, and the values are supplied through the environment of the
+// docker CLI process. The Docker CLI resolves a name-only --env from its own
+// environment, so no credential ever appears in an argument vector. Arguments
+// are readable by every local user through /proc/<pid>/cmdline, whereas the
+// environment is only readable by the process owner (and root).
 func (t Translator) Translate(cmd execution.Command) (execution.Command, error) {
 	if err := t.Config.Validate(); err != nil {
 		return execution.Command{}, err
@@ -59,8 +62,13 @@ func (t Translator) Translate(cmd execution.Command) (execution.Command, error) 
 	if cmd.Stdin != "" {
 		args = append(args, "--interactive")
 	}
+
+	var cliEnv []string
 	for _, entry := range cmd.Env {
-		args = append(args, "--env", entry)
+		if name, _, ok := strings.Cut(entry, "="); ok && name != "" {
+			args = append(args, "--env", name)
+		}
+		cliEnv = append(cliEnv, entry)
 	}
 	if t.Config.PgUser != "" {
 		args = append(args, "--user", t.Config.PgUser)
@@ -72,8 +80,8 @@ func (t Translator) Translate(cmd execution.Command) (execution.Command, error) 
 		Path:  t.Config.DockerPath,
 		Args:  args,
 		Stdin: cmd.Stdin,
-		// Env intentionally empty: the docker CLI itself needs no database
-		// credentials and must not inherit them.
+		// Values for the name-only --env entries above. Kept out of argv.
+		Env: cliEnv,
 	}, nil
 }
 
