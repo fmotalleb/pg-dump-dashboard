@@ -1,0 +1,84 @@
+# GoReleaser configuration for pg-dump-dashboard.
+#
+# Validated with GoReleaser v2.18.3 (schema version 2). Verify locally with:
+#   goreleaser check
+#   goreleaser release --snapshot --clean
+#
+# The frontend is compiled in the `before` hooks, so every released binary
+# contains the Tailwind CSS build and no external assets are shipped. End users
+# never need Node.js, npm or Tailwind.
+
+version: 2
+
+project_name: pg-dump-dashboard
+
+before:
+  hooks:
+    # Reproducible frontend build from the pinned lockfile, then embed.
+    - npm --prefix web ci
+    - npm --prefix web run build
+    # Fail the release if the generated assets are missing.
+    - test -f internal/web/dist/index.html
+    - test -f internal/web/dist/assets/app.css
+
+builds:
+  - id: pg-dump-dashboard
+    main: ./cmd/pg-dump-dashboard
+    binary: pg-dump-dashboard
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/fmotalleb/pg-dump-dashboard/internal/version.Version={{ .Version }}
+      - -X github.com/fmotalleb/pg-dump-dashboard/internal/version.Commit={{ .Commit }}
+      - -X github.com/fmotalleb/pg-dump-dashboard/internal/version.Date={{ .CommitDate }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Reproducible builds: embed a fixed timestamp and ignore VCS state.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - Makefile
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+
+release:
+  github:
+    owner: fmotalleb
+    name: pg-dump-dashboard
+  draft: false
+  prerelease: auto
+  # No LICENSE file is listed in archives or extra_files: the project licence
+  # has not been specified yet (see README, "License").

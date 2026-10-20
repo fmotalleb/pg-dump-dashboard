@@ -1,0 +1,30 @@
+# Build artifacts
+/bin/
+/dist/
+/pg-dump-dashboard
+/pg-dump-dashboard.exe
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# GoReleaser output
+/snapshot/
+/release/
+
+# Frontend dependencies and generated assets
+web/node_modules/
+web/.npm/
+web/npm-debug.log*
+internal/web/dist/*
+!internal/web/dist/.gitkeep
+
+# Editor and OS noise
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Local runtime configuration and secrets
+.env
+.env.*

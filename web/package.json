@@ -1,0 +1,13 @@
+{
+  "name": "pg-dump-dashboard-web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tailwind CSS frontend sources for pg-dump-dashboard",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "tailwindcss": "4.3.3"
+  }
+}

@@ -1,0 +1,129 @@
+# golangci-lint configuration for pg-dump-dashboard.
+#
+# Tested with golangci-lint v2.15.0 (built with Go 1.27) using the schema
+# documented at https://golangci-lint.run/docs/configuration/file/.
+#
+# Run with: golangci-lint run ./...   (or: make lint)
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  # The standard set covers errcheck, govet, ineffassign, staticcheck, unused.
+  default: standard
+
+  enable:
+    # Correctness
+    - bodyclose # HTTP response bodies must be closed
+    - contextcheck # context must be propagated, not replaced
+    - errorlint # errors.Is/As and %w instead of comparisons
+    - errname # error variable/type naming
+    - exhaustive # exhaustive switch over typed constants
+    - nilerr # returning nil after checking a non-nil error
+    - noctx # HTTP requests must carry a context
+    - rowserrcheck # checked rows.Err()
+    - sqlclosecheck # closed sql.Rows/Stmt
+    - unconvert # redundant conversions
+    - unparam # unused parameters
+    - usestdlibvars # use stdlib constants (http.MethodGet, ...)
+    - wastedassign # assignments never used
+
+    # Code quality and consistency
+    - dupword # duplicated words in comments and strings
+    - gocritic # broad set of correctness/style diagnostics
+    - misspell # spelling in comments
+    - whitespace # leading/trailing whitespace
+    - godot # comments end with a period
+
+    # Security
+    - gosec # common security problems (command injection, weak crypto, ...)
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      exclude-functions:
+        # Deliberate fire-and-forget calls on HTTP writers and CLI output.
+        - (io.Closer).Close
+        - fmt.Fprintln
+        - fmt.Fprintf
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+      disabled-checks:
+        - whyNoLint # this config is self-documenting
+
+    gosec:
+      excludes:
+        # G104 (unhandled errors) is covered by errcheck with its own policy.
+        - G104
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # readability beats struct padding here
+        - shadow # shadowing is intentional in table-driven tests
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          arguments: ["disableStutteringCheck"]
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+          disabled: true # not every internal package needs a doc comment
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: superfluous-else
+        - name: unreachable-code
+        - name: unused-parameter
+          disabled: true # interface implementations keep their signatures
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      # Tests use table-driven helpers where unchecked errors and inline
+      # fixtures are normal; keep the security and correctness linters on.
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - contextcheck
+          - dupl
+          - errcheck
+          - gocritic
+          - gosec
+          - noctx
+          - unparam
+          - wastedassign
+      # Vendored or generated frontend assets never contain Go code.
+      - path: internal/web/dist
+        linters:
+          - all
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/fmotalleb/pg-dump-dashboard
+  exclusions:
+    generated: lax

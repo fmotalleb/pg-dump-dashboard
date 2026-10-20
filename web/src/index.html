@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>pg-dump-dashboard</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <script src="/assets/app.js" defer></script>
+  </head>
+  <body class="min-h-full">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:shadow"
+      >Skip to content</a
+    >
+
+    <div class="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+      <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex size-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-6">
+              <ellipse cx="12" cy="5.5" rx="7.5" ry="3" />
+              <path d="M4.5 5.5v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6" />
+              <path d="M4.5 11.5v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-lg font-semibold text-slate-900">pg-dump-dashboard</h1>
+            <p class="text-sm text-slate-500">Browse PostgreSQL metadata and stream dumps</p>
+          </div>
+        </div>
+
+        <div id="meta" class="flex flex-wrap items-center gap-2 text-xs text-slate-500" aria-live="polite">
+          <span class="pill-muted">loading deployment info…</span>
+        </div>
+      </header>
+
+      <main id="main" class="mt-6 flex flex-1 flex-col gap-6">
+        <!-- Connection -->
+        <section id="connect-card" class="card" aria-labelledby="connect-heading">
+          <div class="card-header">
+            <h2 id="connect-heading" class="card-title">PostgreSQL connection</h2>
+            <span id="session-badge" class="pill-muted">not connected</span>
+          </div>
+
+          <form id="connect-form" class="grid gap-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4" novalidate>
+            <div class="sm:col-span-1">
+              <label class="field-label" for="user">User</label>
+              <input
+                class="field-input"
+                id="user"
+                name="user"
+                type="text"
+                autocomplete="username"
+                spellcheck="false"
+                required
+                placeholder="postgres"
+              />
+            </div>
+
+            <div>
+              <label class="field-label" for="password">Password</label>
+              <input
+                class="field-input"
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="••••••••"
+              />
+              <p class="mt-1 text-xs text-slate-500">Held in server memory only.</p>
+            </div>
+
+            <div>
+              <label class="field-label" for="database">Maintenance database</label>
+              <input
+                class="field-input font-mono"
+                id="database"
+                name="database"
+                type="text"
+                spellcheck="false"
+                placeholder="postgres"
+                value="postgres"
+              />
+            </div>
+
+            <div class="flex items-end gap-2">
+              <button id="connect-button" type="submit" class="btn-primary w-full sm:w-auto">
+                <svg
+                  class="hidden size-4 animate-spin"
+                  data-role="spinner"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25" />
+                  <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                </svg>
+                <span data-role="label">Connect</span>
+              </button>
+              <button id="disconnect-button" type="button" class="btn-secondary hidden">Disconnect</button>
+            </div>
+          </form>
+
+          <div class="border-t border-slate-100 px-5 py-3">
+            <p class="text-xs text-slate-500">
+              Credentials are used for the duration of your session and are never written to disk or returned to the
+              browser. The dashboard itself is unauthenticated: expose it only on a trusted network.
+            </p>
+          </div>
+        </section>
+
+        <!-- Alerts -->
+        <div id="alert" class="hidden" role="alert" aria-live="assertive"></div>
+
+        <!-- Summary -->
+        <section id="summary" class="hidden" aria-labelledby="summary-heading">
+          <div class="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h2 id="summary-heading" class="text-sm font-semibold tracking-wide text-slate-900 uppercase">
+                Overview
+              </h2>
+              <p id="summary-subtitle" class="text-xs text-slate-500"></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="refresh-button" type="button" class="btn-secondary">
+                <svg
+                  class="hidden size-4 animate-spin"
+                  data-role="spinner"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25" />
+                  <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                </svg>
+                <span data-role="label">Refresh metadata</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="metrics" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"></div>
+          <p id="counts-note" class="mt-3 text-xs text-slate-500"></p>
+        </section>
+
+        <!-- Databases -->
+        <section id="databases-card" class="card hidden" aria-labelledby="databases-heading">
+          <div class="card-header">
+            <h2 id="databases-heading" class="card-title">Databases</h2>
+            <input
+              id="filter"
+              type="search"
+              class="field-input max-w-xs py-1.5 text-xs"
+              placeholder="Filter databases…"
+              aria-label="Filter databases"
+            />
+          </div>
+
+          <div id="databases-body" class="overflow-x-auto"></div>
+        </section>
+
+        <div id="empty-state" class="card hidden p-10 text-center">
+          <p class="text-sm font-medium text-slate-700">Nothing loaded yet</p>
+          <p class="mt-1 text-sm text-slate-500">
+            Enter PostgreSQL credentials above and press <span class="font-semibold">Connect</span> to inspect the
+            server.
+          </p>
+        </div>
+      </main>
+
+      <footer class="mt-10 border-t border-slate-200 pt-4 text-xs text-slate-500">
+        <p>
+          Object counts are read from system catalogs (exact). Row counts come from <code>pg_class.reltuples</code>
+          planner statistics and are always estimates. Dumps are streamed from the configured execution context —
+          no archive is written to the dashboard host.
+        </p>
+        <p class="mt-1">
+          <span id="footer-version">version unknown</span> ·
+          <a class="font-medium text-brand-600 hover:underline" href="/api/v1/meta">API metadata</a>
+        </p>
+      </footer>
+    </div>
+
+    <div
+      id="download-toast"
+      class="pointer-events-none fixed inset-x-0 bottom-6 flex justify-center px-4 opacity-0 transition-opacity duration-300"
+      aria-live="polite"
+    >
+      <div class="pointer-events-auto card flex items-center gap-3 px-4 py-3 shadow-lg">
+        <span class="pill-ok">Download started</span>
+        <span id="download-toast-text" class="text-sm text-slate-600"></span>
+        <button type="button" id="download-toast-close" class="btn-ghost px-2 py-1 text-xs">Dismiss</button>
+      </div>
+    </div>
+  </body>
+</html>
