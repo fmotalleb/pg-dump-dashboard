@@ -102,6 +102,12 @@ The HTTP handler knows only about `execution.Runner`. Adding an SSH backend mean
 implementing `Runner` (and a `Translator`) and selecting it in `internal/app`;
 nothing in `postgres`, `dump` or `httpapi` changes.
 
+**No third-party Go dependencies.** The module has an empty `require` list: all
+database access goes through the PostgreSQL client tools, so there is no driver
+to keep in sync with the server, and the same code path works for `local`,
+`docker` and a future `ssh` backend. The only pinned external tool is the
+Tailwind CLI, which is used at build time and never shipped.
+
 ## Prerequisites
 
 | Purpose | Requirement |
